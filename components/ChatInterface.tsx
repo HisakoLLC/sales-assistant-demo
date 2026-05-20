@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import TypingIndicator from "./TypingIndicator";
 import CalendlyEmbed from "./CalendlyEmbed";
 import QualificationBadge from "./QualificationBadge";
@@ -20,6 +20,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  showCalendly?: boolean;
 }
 
 const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQualificationChange, qualificationStatus }, ref) => {
@@ -33,7 +34,6 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showCalendly, setShowCalendly] = useState(false);
   
   const [isMounted, setIsMounted] = useState(false);
   const [pulseDot, setPulseDot] = useState(false);
@@ -72,7 +72,7 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading, showCalendly]);
+  }, [messages, isLoading]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -137,14 +137,14 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
           
           setMessages((prev) => prev.map(msg => 
             msg.id === botMsgId 
-              ? { ...msg, content: fullResponse.replace("[SHOW_CALENDLY]", "").trim() }
+              ? { 
+                  ...msg, 
+                  content: fullResponse.replace("[SHOW_CALENDLY]", "").trim(),
+                  showCalendly: fullResponse.includes("[SHOW_CALENDLY]")
+                }
               : msg
           ));
         }
-      }
-
-      if (fullResponse.includes("[SHOW_CALENDLY]")) {
-        setShowCalendly(true);
       }
 
       const lowerRes = fullResponse.toLowerCase();
@@ -239,14 +239,20 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col">
         {messages.map((msg, index) => (
-          <MessageBubble
-            key={msg.id}
-            id={msg.id}
-            role={msg.role}
-            content={msg.content}
-            timestamp={msg.timestamp}
-            isStreaming={isLoading && index === messages.length - 1 && msg.role === "assistant"}
-          />
+          <React.Fragment key={msg.id}>
+            <MessageBubble
+              id={msg.id}
+              role={msg.role}
+              content={msg.content}
+              timestamp={msg.timestamp}
+              isStreaming={isLoading && index === messages.length - 1 && msg.role === "assistant"}
+            />
+            {msg.showCalendly && (
+              <div className="animate-slideUp w-full md:w-[80%] pt-2">
+                <CalendlyEmbed />
+              </div>
+            )}
+          </React.Fragment>
         ))}
         
         {isLoading && messages[messages.length - 1]?.role === "user" && (
@@ -254,12 +260,6 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
             <div className="bg-bot-bubble border-l-2 border-accent rounded-[2px_12px_12px_12px] px-4 py-3 text-text-primary">
               <TypingIndicator />
             </div>
-          </div>
-        )}
-
-        {showCalendly && (
-          <div className="animate-slideUp w-[80%]">
-            <CalendlyEmbed />
           </div>
         )}
         
