@@ -70,8 +70,8 @@ export async function POST(req: Request) {
         "Cache-Control": "no-cache",
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat API error:", error);
-    return NextResponse.json({ error: "Failed to process chat request" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to process chat request" }, { status: 500 });
   }
 }
