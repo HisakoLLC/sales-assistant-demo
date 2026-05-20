@@ -24,10 +24,18 @@ export async function POST(req: Request) {
     });
 
     // Format history for Gemini (excluding the last message which will be sent)
-    const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
+    let history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
     }));
+
+    // Gemini API strict requirement: History must start with a 'user' role
+    if (history.length > 0 && history[0].role === "model") {
+      history.unshift({
+        role: "user",
+        parts: [{ text: "Hi, I'm interested in your services." }],
+      });
+    }
 
     const lastMessage = messages[messages.length - 1].content;
 

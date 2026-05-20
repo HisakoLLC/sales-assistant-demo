@@ -106,6 +106,11 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
@@ -144,6 +149,11 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
 
     } catch (error) {
       console.error("Chat error:", error);
+      setMessages((prev) => prev.map(msg => 
+        msg.id === botMsgId 
+          ? { ...msg, content: "Connection error: Unable to reach the Hisako Digital AI core. Please check your connection and try again." }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
       // Wait for React to render the loading state, then scroll
