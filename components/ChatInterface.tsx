@@ -37,7 +37,9 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
   
   const [isMounted, setIsMounted] = useState(false);
   const [pulseDot, setPulseDot] = useState(false);
+  const [copied, setCopied] = useState(false);
   const prevStatus = useRef(qualificationStatus);
+  const messageCount = useRef(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -98,9 +100,14 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
     ]);
 
     try {
+      messageCount.current += 1;
+      
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Message-Count": messageCount.current.toString()
+        },
         body: JSON.stringify({
           messages: [...messages, newUserMsg].map(m => ({ role: m.role, content: m.content })),
         }),
@@ -108,6 +115,9 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 429) {
+          throw new Error("Session limit reached. Please refresh to start a new conversation.");
+        }
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
@@ -147,11 +157,11 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
         onQualificationChange("disqualified");
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
       setMessages((prev) => prev.map(msg => 
         msg.id === botMsgId 
-          ? { ...msg, content: "Connection error: Unable to reach the Hisako Digital AI core. Please check your connection and try again." }
+          ? { ...msg, content: error.message || "Connection error: Unable to reach the Hisako Digital AI core. Please check your connection and try again." }
           : msg
       ));
     } finally {
@@ -201,6 +211,29 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
             HD — Hisako Digital Growth Intelligence
           </h2>
         </div>
+        
+        <div className="ml-auto relative flex items-center">
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+            className="flex items-center space-x-2 px-3 py-1.5 rounded-md hover:bg-tertiary transition-colors text-text-tertiary hover:text-text-primary font-sans text-xs group"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-accent transition-colors">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span className="hidden md:inline">Share Demo</span>
+          </button>
+          
+          {copied && (
+            <div className="absolute right-0 top-10 bg-tertiary border border-default px-3 py-1.5 rounded-md shadow-lg text-[11px] font-mono text-accent animate-slideUp z-50 whitespace-nowrap">
+              Link copied!
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -245,7 +278,7 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
             placeholder="Type your message..."
             rows={1}
             style={{ height: "44px", minHeight: "44px", maxHeight: "120px" }}
-            className="flex-1 bg-tertiary border border-default rounded-lg px-4 py-3 text-sm text-text-primary font-sans placeholder:text-text-tertiary focus:outline-none focus:border-active transition-colors disabled:opacity-60 resize-none"
+            className="flex-1 bg-tertiary border border-default rounded-lg px-4 py-2.5 text-[16px] text-text-primary font-sans placeholder:text-text-tertiary focus:outline-none focus:border-active transition-colors disabled:opacity-60 resize-none"
           />
           <button
             onClick={() => {

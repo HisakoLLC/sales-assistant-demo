@@ -13,6 +13,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Messages array is required" }, { status: 400 });
     }
 
+    const messageCount = parseInt(req.headers.get("X-Message-Count") || "0", 10);
+    if (messageCount > 30) {
+      return NextResponse.json({ error: "Session limit reached. Please refresh to start a new conversation." }, { status: 429 });
+    }
+
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "Configuration error" }, { status: 500 });
     }

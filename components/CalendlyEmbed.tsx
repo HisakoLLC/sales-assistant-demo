@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 export default function CalendlyEmbed() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
   useEffect(() => {
     const scriptId = "calendly-widget-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement | null;
@@ -19,6 +20,10 @@ export default function CalendlyEmbed() {
         if (typeof window !== "undefined" && (window as any).Calendly) {
           (window as any).Calendly.initInlineWidgets();
         }
+      };
+      
+      script.onerror = () => {
+        setHasError(true);
       };
     } else {
       if (typeof window !== "undefined" && (window as any).Calendly) {
@@ -87,10 +92,28 @@ export default function CalendlyEmbed() {
         </div>
 
         {/* Real Calendly Embed */}
-        <div
-          className="calendly-inline-widget w-full h-full"
-          data-url="https://calendly.com/hisakolimited/new-meeting"
-        />
+        {!hasError ? (
+          <div
+            className="calendly-inline-widget w-full h-full"
+            data-url="https://calendly.com/hisakolimited/new-meeting"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-primary flex items-center justify-center p-6 z-20">
+            <div className="bg-secondary border border-default p-6 rounded-lg text-center max-w-sm">
+              <p className="text-text-primary font-sans text-sm mb-4">
+                Ready to talk? Book directly at
+              </p>
+              <a 
+                href="https://calendly.com/hisakolimited/new-meeting" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-accent font-sans text-sm hover:underline break-all"
+              >
+                calendly.com/hisakolimited/new-meeting
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -14,13 +14,13 @@ export default function SidePanel({ onQuickTest, qualificationStatus }: SidePane
   }, []);
 
   return (
-    <div className={`flex flex-row md:flex-col w-full md:h-full bg-secondary md:border-r border-b border-default p-4 md:py-8 md:px-6 items-center md:items-stretch justify-between md:justify-start shrink-0 z-10 relative transition-all duration-400 ease-out ${isMounted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-[20px]"}`}>
+    <div className={`flex flex-row md:flex-col w-full md:h-full bg-secondary md:border-r border-b border-default p-4 md:py-8 md:px-6 items-center md:items-stretch justify-between md:justify-start shrink-0 z-10 relative transition-all duration-400 ease-out overflow-y-auto overflow-x-hidden ${isMounted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-[20px]"}`}>
       
       {/* SECTION 1: LOGO / BRAND */}
       <div className="md:mb-8 flex flex-col justify-center">
-        <div className="flex items-baseline gap-x-1.5 md:gap-x-2">
-          <span className="font-display text-[24px] md:text-[36px] tracking-[0.05em] text-text-primary leading-none">HISAKO</span>
-          <span className="font-display text-[24px] md:text-[36px] tracking-[0.05em] text-accent leading-none">DIGITAL</span>
+        <div className="flex items-baseline gap-x-1.5 md:gap-x-2 pt-1">
+          <span className="font-display text-[24px] md:text-[36px] tracking-[0.05em] text-text-primary leading-[1.1]">HISAKO</span>
+          <span className="font-display text-[24px] md:text-[36px] tracking-[0.05em] text-accent leading-[1.1]">DIGITAL</span>
         </div>
         <hr className="hidden md:block border-t border-default my-3" />
         <div className="hidden md:block font-mono text-[11px] text-text-tertiary tracking-[0.08em] uppercase">
@@ -66,6 +66,17 @@ export default function SidePanel({ onQuickTest, qualificationStatus }: SidePane
             <span>See the Booking Flow</span>
           </button>
         </div>
+
+        <button 
+          onClick={() => {
+            if (window.confirm("Are you sure you want to reset the conversation?")) {
+              window.location.reload();
+            }
+          }}
+          className="mt-4 font-mono text-[11px] text-text-tertiary hover:text-text-primary transition-colors flex items-center"
+        >
+          <span className="mr-1.5">↺</span> Reset conversation
+        </button>
       </div>
 
       {/* SECTION 4: ABOUT */}
