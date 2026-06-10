@@ -4,6 +4,23 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>, 
+  retries = 3, 
+  delayMs = 300
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 1) {
+      throw error;
+    }
+    console.warn(`Action failed, retrying in ${delayMs}ms... (${retries - 1} retries left). Error:`, error);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return retryWithBackoff(fn, retries - 1, delayMs * 1.5);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -49,18 +66,18 @@ export async function POST(req: Request) {
         systemInstruction: SYSTEM_PROMPT 
       });
       const chat = model.startChat({ history });
-      result = await chat.sendMessageStream(lastMessage);
+      result = await retryWithBackoff(() => chat.sendMessageStream(lastMessage), 3, 300);
     } catch (primaryError: any) {
-      console.warn(`Primary model ${primaryModelName} failed, attempting fallback. Error:`, primaryError);
+      console.warn(`Primary model ${primaryModelName} failed after retries, attempting fallback. Error:`, primaryError);
       try {
         const model = genAI.getGenerativeModel({ 
           model: fallbackModelName, 
           systemInstruction: SYSTEM_PROMPT 
         });
         const chat = model.startChat({ history });
-        result = await chat.sendMessageStream(lastMessage);
+        result = await retryWithBackoff(() => chat.sendMessageStream(lastMessage), 3, 300);
       } catch (fallbackError: any) {
-        console.error(`Fallback model ${fallbackModelName} also failed. Error:`, fallbackError);
+        console.error(`Fallback model ${fallbackModelName} also failed after retries. Error:`, fallbackError);
         const url = new URL(req.url);
         const debug = url.searchParams.get("debug") === "true";
         return NextResponse.json({ 
