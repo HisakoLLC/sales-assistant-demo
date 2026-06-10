@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       });
       const chat = model.startChat({ history });
       result = await chat.sendMessageStream(lastMessage);
-    } catch (primaryError) {
+    } catch (primaryError: any) {
       console.warn(`Primary model ${primaryModelName} failed, attempting fallback. Error:`, primaryError);
       try {
         const model = genAI.getGenerativeModel({ 
@@ -59,9 +59,15 @@ export async function POST(req: Request) {
         });
         const chat = model.startChat({ history });
         result = await chat.sendMessageStream(lastMessage);
-      } catch (fallbackError) {
+      } catch (fallbackError: any) {
         console.error(`Fallback model ${fallbackModelName} also failed. Error:`, fallbackError);
-        return NextResponse.json({ error: "We are experiencing high traffic, try again." }, { status: 500 });
+        const url = new URL(req.url);
+        const debug = url.searchParams.get("debug") === "true";
+        return NextResponse.json({ 
+          error: debug 
+            ? `Primary: ${primaryError.message || primaryError}. Fallback: ${fallbackError.message || fallbackError}`
+            : "We are experiencing high traffic, try again." 
+        }, { status: 500 });
       }
     }
 
@@ -89,6 +95,12 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Chat API outer error:", error);
-    return NextResponse.json({ error: "We are experiencing high traffic, try again." }, { status: 500 });
+    const url = new URL(req.url);
+    const debug = url.searchParams.get("debug") === "true";
+    return NextResponse.json({ 
+      error: debug 
+        ? `Outer error: ${error.message || error}`
+        : "We are experiencing high traffic, try again." 
+    }, { status: 500 });
   }
 }

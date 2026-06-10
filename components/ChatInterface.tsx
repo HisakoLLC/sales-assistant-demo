@@ -189,11 +189,24 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
-          throw new Error("Session limit reached. Please refresh to start a new conversation.");
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (response.status === 429) {
+            throw new Error("Session limit reached. Please refresh to start a new conversation.");
+          }
+          const rawError = errorData.error;
+          if (typeof rawError === "string") {
+            errorMessage = rawError;
+          } else if (rawError && typeof rawError === "object") {
+            errorMessage = rawError.message || JSON.stringify(rawError);
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (jsonErr) {
+          // Fallback to default HTTP status string if JSON parsing fails
         }
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(errorMessage);
       }
 
       if (!response.body) throw new Error("No response body");
