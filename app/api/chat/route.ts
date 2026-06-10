@@ -23,10 +23,8 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-pro", 
-      systemInstruction: SYSTEM_PROMPT 
-    });
+    const primaryModelName = "gemini-3.5-flash";
+    const fallbackModelName = "gemini-1.5-flash";
 
     // Format history for Gemini (excluding the last message which will be sent)
     let history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
@@ -44,11 +42,28 @@ export async function POST(req: Request) {
 
     const lastMessage = messages[messages.length - 1].content;
 
-    const chat = model.startChat({
-      history,
-    });
-
-    const result = await chat.sendMessageStream(lastMessage);
+    let result;
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: primaryModelName, 
+        systemInstruction: SYSTEM_PROMPT 
+      });
+      const chat = model.startChat({ history });
+      result = await chat.sendMessageStream(lastMessage);
+    } catch (primaryError) {
+      console.warn(`Primary model ${primaryModelName} failed, attempting fallback. Error:`, primaryError);
+      try {
+        const model = genAI.getGenerativeModel({ 
+          model: fallbackModelName, 
+          systemInstruction: SYSTEM_PROMPT 
+        });
+        const chat = model.startChat({ history });
+        result = await chat.sendMessageStream(lastMessage);
+      } catch (fallbackError) {
+        console.error(`Fallback model ${fallbackModelName} also failed. Error:`, fallbackError);
+        return NextResponse.json({ error: "We are experiencing high traffic, try again." }, { status: 500 });
+      }
+    }
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -59,7 +74,9 @@ export async function POST(req: Request) {
           }
           controller.close();
         } catch (error) {
-          controller.error(error);
+          console.error("Mid-stream error captured:", error);
+          controller.enqueue(new TextEncoder().encode("\n\n[We are experiencing high traffic, try again.]"));
+          controller.close();
         }
       },
     });
@@ -71,7 +88,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Chat API error:", error);
-    return NextResponse.json({ error: error.message || "Failed to process chat request" }, { status: 500 });
+    console.error("Chat API outer error:", error);
+    return NextResponse.json({ error: "We are experiencing high traffic, try again." }, { status: 500 });
   }
 }
