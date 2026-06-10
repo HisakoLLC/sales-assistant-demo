@@ -41,6 +41,81 @@ const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onQual
   const prevStatus = useRef(qualificationStatus);
   const messageCount = useRef(0);
 
+  // Email Notification Session & State Tracking
+  const sessionId = useRef("");
+  const summarySentRef = useRef(false);
+  const messagesRef = useRef(messages);
+  const statusRef = useRef(qualificationStatus);
+
+  useEffect(() => {
+    sessionId.current = typeof window !== "undefined" && window.crypto?.randomUUID 
+      ? window.crypto.randomUUID() 
+      : Math.random().toString(36).substring(2, 15);
+  }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    statusRef.current = qualificationStatus;
+  }, [qualificationStatus]);
+
+  const sendSummaryEmail = async (currentMessages: Message[], currentStatus: "neutral" | "qualified" | "disqualified", triggerType: "milestone" | "exit") => {
+    const userMessagesCount = currentMessages.filter(m => m.role === "user").length;
+    if (summarySentRef.current || userMessagesCount === 0) return;
+
+    summarySentRef.current = true;
+
+    const payload = {
+      messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
+      status: currentStatus,
+      triggerType,
+      sessionId: sessionId.current
+    };
+
+    try {
+      const isExit = triggerType === "exit";
+      await fetch("/api/send-summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        keepalive: isExit,
+      });
+      console.log(`[Summary] Sent summary notification (${triggerType})`);
+    } catch (err) {
+      console.error("Failed to send summary email:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (qualificationStatus === "qualified" || qualificationStatus === "disqualified") {
+      sendSummaryEmail(messagesRef.current, qualificationStatus, "milestone");
+    }
+  }, [qualificationStatus]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        sendSummaryEmail(messagesRef.current, statusRef.current, "exit");
+      }
+    };
+
+    const handlePageHide = () => {
+      sendSummaryEmail(messagesRef.current, statusRef.current, "exit");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
