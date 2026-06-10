@@ -222,4 +222,7 @@ The system prompt is injected in `lib/systemPrompt.ts` and passed to every `/api
 5. **Closing block** — When and how to trigger the Calendly
 6. **Format rules block** — Response length, markdown rules, tone calibration
 
-Each section is clearly labeled with comments so it can be tuned independently.
+Each section is clearly labeled with comments so it can be tuned independently. 
+
+
+--Done--
