@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const toEmail = process.env.TO_EMAIL || "harith@hisako.eu";
-    const fromEmail = process.env.FROM_EMAIL || "leads.hello@hisako.eu";
+    const fromEmail = process.env.FROM_EMAIL || "leads@notify.hisako.eu";
     const resendApiKey = process.env.RESEND_API_KEY;
 
     let leadInfo = {
